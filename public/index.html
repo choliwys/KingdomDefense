@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Kingdom Defense Modular</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>🏰 Kingdom Defense</h1>
+
+    <div id="build-controls">
+        <button id="btnArcher" class="tower-btn active" data-type="ARCHER">
+            <img id="iconArcher" class="icon-preview"> <div>Arquero<br><small>$50</small></div>
+        </button>
+        <button id="btnCannon" class="tower-btn" data-type="CANNON">
+            <img id="iconCannon" class="icon-preview"> <div>Cañón<br><small>$120</small></div>
+        </button>
+        <button id="btnIce" class="tower-btn" data-type="ICE">
+            <img id="iconIce" class="icon-preview"> <div>Hielo<br><small>$80</small></div>
+        </button>
+    </div>
+    
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="upgrade-panel">
+            <h3 id="upg-title">Torre</h3>
+            <div id="upg-info">Stats...</div>
+            <div class="btn-group">
+                <button id="btnUpgrade" class="upgrade-btn">Mejorar</button>
+                <button id="btnSell" class="upgrade-btn sell-btn">Vender</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div class="stat-box">❤️ <span id="livesDisplay">10</span></div>
+        <div class="stat-box">💰 <span id="moneyDisplay">200</span></div>
+        <div class="stat-box">💀 Ola: <span id="waveDisplay">1</span></div>
+    </div>
+    <div id="pause-hint">Presiona ESPACIO para pausar</div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
