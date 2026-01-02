@@ -12,7 +12,15 @@ export class Projectile {
         if (dist < this.speed) {
             this.target.health -= this.damage;
             if (this.effect) this.target.applyEffect(this.effect);
-            if (this.target.health <= 0) { this.target.dead = true; game.money += 15; }
+            
+            // --- BLOQUE MODIFICADO ---
+            if (this.target.health <= 0 && !this.target.dead) { 
+                this.target.dead = true; 
+                this.target.spawnParticles(); // <--- ¡EXPLOSIÓN!
+                game.money += 15; 
+            }
+            // -------------------------
+
             this.hit = true;
         } else {
             this.x += ((this.target.x - this.x) / dist) * this.speed;

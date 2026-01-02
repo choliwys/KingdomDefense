@@ -5,6 +5,7 @@ export const game = {
     enemies: [],
     towers: [],
     projectiles: [],
+    particles: [],
     waveIndex: 0,
     enemiesSpawned: 0,
     spawnTimer: 0,

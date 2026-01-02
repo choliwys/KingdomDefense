@@ -4,37 +4,31 @@ import { SoundManager } from './SoundManager.js';
 import { Enemy } from './classes/Enemy.js';
 import { Tower } from './classes/Tower.js';
 
+// --- VARIABLES GLOBALES (Deben estar aquí arriba) ---
 let currentState = GAME_STATE.MENU;
 let buildType = 'ARCHER';
 let selectedTower = null;
 let assetsLoaded = 0;
 
+// RECUPERAR RECORD (Si no existe, es 0)
+let highScore = parseInt(localStorage.getItem('kingdomDefense_highScore')) || 0;
+
 // CARGAR ASSETS
 function loadAssets(callback) {
     const keys = Object.keys(SVG_ASSETS);
     const total = keys.length;
-    // Si no hay assets, arrancamos igual
     if (total === 0) callback();
 
     keys.forEach(key => {
         const img = new Image();
         img.src = SVG_ASSETS[key];
-        img.onload = () => { 
-            assetsLoaded++; 
-            console.log(`Imagen cargada: ${key}`); // Debug
-            if(assetsLoaded === total) callback(); 
-        };
-        img.onerror = () => { 
-            console.error(`Error cargando imagen: ${key}`); 
-            assetsLoaded++; 
-            if(assetsLoaded === total) callback(); 
-        };
+        img.onload = () => { assetsLoaded++; if(assetsLoaded === total) callback(); };
+        img.onerror = () => { assetsLoaded++; if(assetsLoaded === total) callback(); };
         IMAGES[key] = img;
     });
 }
 
 function initGame() {
-    console.log("Inicializando juego...");
     SoundManager.init();
     
     // Reseteamos variables globales
@@ -43,12 +37,12 @@ function initGame() {
     game.enemies = [];
     game.towers = [];
     game.projectiles = [];
+    game.particles = []; // Limpiamos partículas
     game.waveIndex = 0;
     game.enemiesSpawned = 0;
     game.spawnTimer = 0;
     game.waveCooldown = 300;
     
-    // Aseguramos que el path exista
     game.path = [
         {x: 0, y: 2}, {x: 17, y: 2}, {x: 17, y: 7},
         {x: 2, y: 7}, {x: 2, y: 12}, {x: 19, y: 12}
@@ -60,13 +54,11 @@ setTimeout(() => {
     const iconArcher = document.getElementById('iconArcher');
     const iconCannon = document.getElementById('iconCannon');
     const iconIce = document.getElementById('iconIce');
-    
     if(iconArcher) iconArcher.src = SVG_ASSETS.archer;
     if(iconCannon) iconCannon.src = SVG_ASSETS.cannon;
     if(iconIce) iconIce.src = SVG_ASSETS.ice;
 }, 100);
 
-// Event Listeners UI
 document.querySelectorAll('.tower-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         buildType = btn.dataset.type;
@@ -77,26 +69,27 @@ document.querySelectorAll('.tower-btn').forEach(btn => {
 
 const btnUpgrade = document.getElementById('btnUpgrade');
 if(btnUpgrade) btnUpgrade.addEventListener('click', upgradeSelectedTower);
-
 const btnSell = document.getElementById('btnSell');
 if(btnSell) btnSell.addEventListener('click', sellSelectedTower);
 
-// Event Listener Canvas
+// INPUTS DEL JUEGO
 if(canvas) {
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
+        // --- MENU PRINCIPAL ---
         if (currentState === GAME_STATE.MENU) {
-            // Botón Jugar
-            if (mouseX > 300 && mouseX < 500 && mouseY > 250 && mouseY < 350) {
+            // Botón Jugar (Coordenadas ajustadas para no chocar con el texto de Récord)
+            if (mouseX > 300 && mouseX < 500 && mouseY > 300 && mouseY < 380) {
                 initGame(); 
                 currentState = GAME_STATE.PLAYING;
             }
             return;
         }
         
+        // --- GAME OVER / VICTORIA ---
         if (currentState === GAME_STATE.GAMEOVER || currentState === GAME_STATE.VICTORY) {
             // Botón Reiniciar
             if (mouseX > 300 && mouseX < 500 && mouseY > 350 && mouseY < 450) {
@@ -108,17 +101,15 @@ if(canvas) {
 
         if (currentState !== GAME_STATE.PLAYING) return;
 
+        // --- JUEGO (Construir) ---
         const gridX = Math.floor(mouseX / CELL_SIZE);
         const gridY = Math.floor(mouseY / CELL_SIZE);
-        
-        // Clic en Torre
         const clickedTower = game.towers.find(t => Math.floor(t.x/CELL_SIZE) === gridX && Math.floor(t.y/CELL_SIZE) === gridY);
 
         if (clickedTower) {
             selectedTower = clickedTower; 
             updateUpgradePanel();
         } else {
-            // Construir Torre
             selectedTower = null; 
             const panel = document.getElementById('upgrade-panel');
             if(panel) panel.style.display = 'none';
@@ -161,7 +152,6 @@ function updateUpgradePanel() {
         panel.style.display = 'flex';
         title.innerText = `${selectedTower.name} (Nv. ${selectedTower.level})`;
         info.innerText = `Daño: ${selectedTower.damage} | Rango: ${selectedTower.range}`;
-        
         const cost = selectedTower.getUpgradeCost();
         if (selectedTower.level >= selectedTower.maxLevel) { 
             btn.innerText = "MAX"; btn.disabled = true; 
@@ -170,7 +160,6 @@ function updateUpgradePanel() {
         }
     }
 }
-
 function upgradeSelectedTower() {
     if (selectedTower && game.money >= selectedTower.getUpgradeCost()) {
         game.money -= selectedTower.getUpgradeCost(); selectedTower.upgrade(); updateUpgradePanel();
@@ -186,11 +175,10 @@ function sellSelectedTower() {
     }
 }
 
-// DRAW FUNCTIONS
+// DIBUJO DE PANTALLAS
 function drawMap() {
     if(!ctx) return;
     ctx.fillStyle = '#2d5a27'; ctx.fillRect(0,0, canvas.width, canvas.height);
-    
     if(game.path && game.path.length > 0) {
         ctx.lineWidth = 40; ctx.strokeStyle = '#5d4037'; ctx.lineCap = 'butt'; ctx.lineJoin = 'miter'; 
         ctx.beginPath();
@@ -203,11 +191,19 @@ function drawMap() {
 function drawMenu() {
     if(!ctx) return;
     ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0,0, canvas.width, canvas.height);
+    
+    // Titulo
     ctx.fillStyle = '#FFD700'; ctx.font = 'bold 60px Segoe UI'; ctx.textAlign = 'center';
     ctx.fillText("KINGDOM DEFENSE", 400, 200);
-    ctx.fillStyle = '#28a745'; ctx.fillRect(300, 250, 200, 100);
-    ctx.strokeStyle = 'white'; ctx.lineWidth = 4; ctx.strokeRect(300, 250, 200, 100);
-    ctx.fillStyle = 'white'; ctx.font = 'bold 40px Segoe UI'; ctx.fillText("JUGAR", 400, 315);
+    
+    // Récord (Aquí usa la variable global highScore)
+    ctx.fillStyle = '#AAAAAA'; ctx.font = '30px Segoe UI';
+    ctx.fillText(`Récord: Oleada ${highScore}`, 400, 260);
+
+    // Botón Jugar
+    ctx.fillStyle = '#28a745'; ctx.fillRect(300, 300, 200, 80);
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 4; ctx.strokeRect(300, 300, 200, 80);
+    ctx.fillStyle = 'white'; ctx.font = 'bold 40px Segoe UI'; ctx.fillText("JUGAR", 400, 355);
 }
 
 function drawGameOver() {
@@ -230,16 +226,18 @@ function drawVictory() {
     ctx.fillStyle = 'white'; ctx.font = '30px Segoe UI'; ctx.fillText("Jugar de Nuevo", 400, 410);
 }
 
-// MAIN LOOP
+// BUCLE PRINCIPAL
 function gameLoop() {
-    if(!ctx) return; // Seguridad si el canvas no cargó
+    if(!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (currentState === GAME_STATE.MENU) { drawMenu(); } 
+    if (currentState === GAME_STATE.MENU) { 
+        drawMenu(); 
+    } 
     else if (currentState === GAME_STATE.PLAYING || currentState === GAME_STATE.PAUSED) {
         drawMap();
         if (currentState === GAME_STATE.PLAYING) {
-            // Wave Logic
+            // Lógica de Oleadas
             if (game.waveIndex < WAVES_CONFIG.length) {
                 const wv = WAVES_CONFIG[game.waveIndex];
                 if (game.waveCooldown > 0) {
@@ -257,23 +255,36 @@ function gameLoop() {
                         game.waveIndex++; game.enemiesSpawned = 0; game.waveCooldown = 300; game.money += 200;
                     }
                 }
-            } else if (game.enemies.length === 0) { currentState = GAME_STATE.VICTORY; SoundManager.playWin(); }
+            } else if (game.enemies.length === 0) { 
+                currentState = GAME_STATE.VICTORY; SoundManager.playWin(); 
+            }
 
             // Updates
             game.towers.forEach(t => t.update());
             game.enemies.forEach(e => e.update());
             game.projectiles.forEach(p => p.update());
-            
+            game.particles.forEach(p => p.update()); // Partículas
+
             game.enemies = game.enemies.filter(e => !e.dead);
             game.projectiles = game.projectiles.filter(p => !p.hit);
+            game.particles = game.particles.filter(p => p.life > 0);
             
-            if (game.lives <= 0) { currentState = GAME_STATE.GAMEOVER; SoundManager.playLose(); }
+            if (game.lives <= 0) { 
+                currentState = GAME_STATE.GAMEOVER; 
+                SoundManager.playLose();
+                // GUARDAR RECORD
+                if (game.waveIndex + 1 > highScore) {
+                    highScore = game.waveIndex + 1;
+                    localStorage.setItem('kingdomDefense_highScore', highScore);
+                }
+            }
         }
         
-        // Render
+        // Renders
         game.towers.forEach(t => t.draw(selectedTower));
         game.enemies.sort((a,b) => a.y - b.y);
         game.enemies.forEach(e => e.draw());
+        game.particles.forEach(p => p.draw()); // Dibujar partículas
         game.projectiles.forEach(p => p.draw());
 
         if (selectedTower) updateUpgradePanel(); 
@@ -292,9 +303,8 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// INICIO - Versión Corregida
 loadAssets(() => { 
-    console.log("Assets cargados. Iniciando loop."); 
-    initGame(); // <-- ESTO FALTABA
+    console.log("Juego cargado. Esperando en MENU.");
+    // NO llamamos a initGame() aquí para que el juego empiece en el MENÚ
     gameLoop(); 
 });

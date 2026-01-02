@@ -1,5 +1,6 @@
 import { game, ctx, IMAGES } from '../globals.js';
 import { CELL_SIZE } from '../constants.js';
+import { Particle } from './Particle.js';
 
 export class Enemy {
     constructor(speed, hp, isBoss) {
@@ -18,6 +19,7 @@ export class Enemy {
     applyEffect(type) { if (type === 'FREEZE') this.freezeTimer = 90; }
 
     update() {
+        // ... lógica de movimiento ...
         if (this.freezeTimer > 0) { this.currentSpeed = this.baseSpeed * 0.5; this.freezeTimer--; } 
         else { this.currentSpeed = this.baseSpeed; }
 
@@ -32,7 +34,17 @@ export class Enemy {
         else { this.x += ((tx - this.x) / dist) * this.currentSpeed; this.y += ((ty - this.y) / dist) * this.currentSpeed; }
     }
 
+    spawnParticles() {
+        const count = this.isBoss ? 20 : 8; // Más partículas si es jefe
+        const color = this.isBoss ? '#800080' : '#6C8E23'; // Morado o Verde
+        
+        for (let i = 0; i < count; i++) {
+            game.particles.push(new Particle(this.x, this.y, color));
+        }
+    }
+
     draw() {
+        // ... (Tu draw sigue igual) ...
         let size = this.isBoss ? 40 : 30;
         if (this.img && this.img.complete) { try { ctx.drawImage(this.img, this.x - size/2, this.y - size/2, size, size); } catch (e) {} } 
         else { ctx.fillStyle = this.isBoss ? 'purple' : 'red'; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fill(); }
